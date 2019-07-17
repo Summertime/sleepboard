@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+shopt -s globstar
+shopt -s extglob
+
+rm -f sleepboard.zip
+
+TEMPDIR="$(mktemp --directory --tmpdir=.)"
+trap 'rm -r -f -- "$TEMPDIR"' EXIT
+
+cp -r -T "sleepboard/" "$TEMPDIR"
+
+for fn in $TEMPDIR/**/*.@(json|mcmeta); do
+    jq -S -c . < "$fn" > "$fn.c"
+    mv -f -T "$fn.c" "$fn"
+done
+
+for fn in $TEMPDIR/**; do
+    touch --date=@0 -- "$fn"
+done
+
+(
+    cd "$TEMPDIR";
+    find . -not -type d |
+    LC_ALL=C sort |
+    zip -@ -9 -D -X -q ../sleepboard.zip;
+)
